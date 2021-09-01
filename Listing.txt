@@ -1,0 +1,145 @@
+﻿unit Unit1;
+
+interface
+
+uses
+  Windows, Messages, SysUtils, Variants, Classes, Graphics, Controls, Forms,
+  Dialogs, StdCtrls, Grids;
+
+type
+  TForm1 = class(TForm)
+    StringGrid1: TStringGrid;
+    Button1: TButton;
+    Button2: TButton;
+    Button3: TButton;
+    StringGrid2: TStringGrid;
+    OpenDialog1: TOpenDialog;
+    SaveDialog1: TSaveDialog;
+    procedure LoadCSVFile(FileName: String; separator: char);
+    procedure SaveCSVFile(FileName: String; Grid: TStringGrid);
+    procedure Button1Click(Sender: TObject);
+    procedure Button3Click(Sender: TObject);
+    procedure Button2Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.dfm}
+
+
+//Загружаем CSV-файл в StringGrid1
+procedure TForm1.Button1Click(Sender: TObject);
+var
+  i: Integer;
+begin
+//Очищаем грид перед загрузкой нового файла
+  for i := 0 to StringGrid1.ColCount - 1 do
+  StringGrid1.Cols[i].Clear;
+  StringGrid1.RowCount := 1;
+
+  if OpenDialog1.Execute then
+  LoadCSVFile(OpenDialog1.FileName, ';');
+end;
+{Обработка сохранения в файл из таблицы. В качестве параметров
+передаём имя файла и грид}
+procedure TForm1.SaveCSVFile(FileName: String; Grid: TStringGrid);
+var
+  l: TStrings;
+  i: word;
+begin
+  l:= TStringList.Create;
+  {Циклом проходимся по грид, меняя разделитель на ;
+  после добавляя значения в строку
+  и после окончания цикла записывая всё в файл}
+  for i:= 0 to Pred(Grid.RowCount) do
+  begin
+    Grid.Rows[i].StrictDelimiter:= true;
+    Grid.Rows[i].Delimiter:= ';';
+    l.Add(Grid.Rows[i].DelimitedText);
+  end;
+  l.SaveToFile(FileName);
+  l.Free;
+end;
+
+//Считаем количество TRX на каждой BS
+procedure TForm1.Button2Click(Sender: TObject);
+var
+    i,j,k:integer;
+    t:TStringList;
+    s:string;
+begin
+StringGrid2.Cells[0,0] := 'BS Name';
+StringGrid2.Cells[1,0] := 'TRX Count';
+t:=TStringList.Create;
+t.AddStrings(StringGrid1.Cols[0]); //Загружаем грид в строку
+for j:=t.Count-1 downto 0 do
+if t.Strings[j]='' then t.Delete(j); //И удаляем пустые строки
+i:=1; //Начальный номер слова (считаем с первого)
+while t.Count>0 do
+ begin
+  k:=0; //Счётчик повторений BS
+  s:=t.Strings[0]; //
+  for j:=t.Count-1 downto 0 do
+  if t.Strings[j]=s then //Если слова повторяются то инкрементируем их количество
+   begin
+    inc(k);
+    t.Delete(j); //Очищаем строку для следующей итерации
+   end;
+  StringGrid2.Cells[0,i]:=s;//Записываем BS в первый столбец грида
+  StringGrid2.Cells[1,i]:=inttostr(k);//Количество TRX
+  inc(i);//следующее слово
+ end;
+end;
+
+//Сохраняем CSV файл из StringGrid2
+procedure TForm1.Button3Click(Sender: TObject);
+begin
+if SaveDialog1.Execute then
+ SaveCSVFile(SaveDialog1.FileName, Form1.StringGrid2);
+end;
+
+{Обработка загрузки CSV файла. Файл обрабатывается как текстовый файл,
+читая его построчно, а в качестве параметров передаём имя файла и тип разделителя данных}
+procedure TForm1.LoadCSVFile(FileName: String; separator: char);
+var
+    f: TextFile;
+    s1, s2: string;
+    i, j: integer;
+begin
+ i := 0;  //Обнуляем счётчик
+ AssignFile (f, FileName);
+ Reset(f); //Ассоциация файла с переменной f и открытие для чтения до его окончания
+ while not eof(f) do
+  begin
+   readln (f, s1);
+   i := i + 1; //считаем количество строк
+   j := 0;
+   while pos(separator, s1)<>0 do
+    begin
+     s2 := copy(s1,1,pos(separator, s1)-1);  //Разделяем значения в файле запятой
+     j := j + 1;
+     delete(s1, 1, pos(separator, s1));
+    StringGrid1.Cells[j-1, i-1] := s2;     //Записываем значения в грид
+    end;
+   if pos (separator, s1)=0 then
+    begin
+     j := j + 1;
+     StringGrid1.Cells[j-1, i-1] := s1;
+    end;
+    StringGrid1.ColCount := j;
+    StringGRid1.RowCount := i+1;
+  end;
+ CloseFile(f);
+//end 
+end;
+
+
+
+end.
